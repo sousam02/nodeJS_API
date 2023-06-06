@@ -1,6 +1,8 @@
 const http = require('http');
 const {URL} = require('url');
 
+const bodyParser = require('./helpers/bodyParser');
+
 const routes = require('./routes');
 
 const server = http.createServer(
@@ -18,8 +20,6 @@ const server = http.createServer(
             id = splitEndpoint[1];
         }
 
-        console.log(splitEndpoint)
-
         const route = routes.find(
             (routeObject) => (
                 routeObject.method === request.method && routeObject.endpoint ===  pathname
@@ -30,13 +30,16 @@ const server = http.createServer(
             request.query = Object.fromEntries(parsedUrl.searchParams);
             request.params = { id }
             response.send = (statusCode, body) => {
-                response.writeHead(
-                    statusCode, {
-                    'Content-type': 'application/json'
-                });
+                response.writeHead( statusCode, { 'Content-type': 'application/json' });
                 response.end(JSON.stringify(body));
             }
-            route.handler(request, response)
+
+            if(['POST', 'PUT', 'PATCH'].includes(request.method)){
+                bodyParser(request, () => route.handler(request, response));
+            }else {
+                route.handler(request, response)
+            }
+
         } else {
             response.writeHead(
                 404, {
